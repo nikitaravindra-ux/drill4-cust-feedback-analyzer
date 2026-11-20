@@ -16,6 +16,54 @@ The answer can never be anything but a defined category, and it is deterministic
 
 The model is trained and run locally. **There is no external API call.**
 
+## Required technique 1: extending the tokenizer and model (`app/tokens.py`)
+
+Five new special tokens are added to the GPT-2 tokenizer, and the model's embedding matrix is resized to hold them.
+
+```python
+tokenizer.add_special_tokens({"additional_special_tokens": LABEL_TOKENS})   # 1. new ids at the end of the vocab
+model.resize_token_embeddings(len(tokenizer))                               # 2. embedding matrix grows to match
+emb[new_rows] = mean_of_existing_embeddings(label words) + tiny noise       # 3. mean-initialised, not random
+```
+
+| token | id |
+|---|---:|
+| `<product_issue>` | 50257 |
+| `<staff_praise>` | 50258 |
+| `<staff_complaint>` | 50259 |
+| `<pricing_value>` | 50260 |
+| `<store_experience>` | 50261 |
+
+Vocab size / embedding rows: **50,257 before -> 50,262 after** (`distilgpt2`). Run `python -m app.cli milestone 2` to
+print this live, including `embeddings_resized_to_match: true`.
+
+**Mean initialisation and why it helps.** `resize_token_embeddings` adds rows that would otherwise be random noise.
+Each new row is instead set to the mean embedding of the words in its label (`<staff_praise>` -> "staff praise");
+`init="mean"` uses the mean of all existing embeddings. GPT-2 ties input and output embeddings, so this also gives
+each label a sensible starting output logit. The model starts from distinct, meaningful points rather than
+arbitrary ones, which matters with only ~270 training examples (see the observation under "How the special tokens
+were added" below).
+
+## Required technique 2: the Hugging Face `Trainer` (`app/finetune.py`)
+
+Fine-tuning uses `transformers.Trainer` with `TrainingArguments` (`training_arguments()` and `build_trainer()` in
+`app/finetune.py`; `train()` runs it). The loss is masked to the label token only. These are the arguments used for
+the real run:
+
+```python
+TrainingArguments(
+    num_train_epochs=8, per_device_train_batch_size=8, learning_rate=1e-4, weight_decay=0.01,
+    warmup_steps=0.1, lr_scheduler_type="linear", logging_steps=5, save_strategy="no",
+    eval_strategy="no", report_to="none", seed=42, remove_unused_columns=False,
+    use_cpu=False,  # True when the device is cpu
+)
+trainer = Trainer(model=model, args=args, train_dataset=FeedbackDataset(...), data_collator=PadCollator(...))
+trainer.train(); trainer.save_model(...)
+```
+
+Run it with `python -m app.cli train` (or `python -m app.cli milestone 3`); the summary (arguments used, epochs, final
+loss, save location) is printed and written to `models/feedback-gpt2/training_info.json`.
+
 ## Categories (and why)
 
 | token | meaning |
@@ -165,6 +213,7 @@ python -m app.cli dataset                       # validate raw comments, write d
 python -m app.cli train                         # fine-tune (~1 min on Apple Silicon); saves models/feedback-gpt2
 python -m app.cli evaluate                      # accuracy, per-class P/R/F1, confusion matrix, baseline
 python -m app.cli classify "The cashier was rude to me"
+python -m app.cli milestone N                   # run milestone N (1-5) and print its result, see below
 streamlit run app/main.py                       # the UI (loads the model once; never trains)
 pytest                                          # offline, ~1s, no downloads
 ```
@@ -179,6 +228,18 @@ The fine-tuned model is ~316 MB (`distilgpt2`; ~500 MB for `gpt2`), too large to
 `.gitignore`. Regenerate it with `python -m app.cli train` (the dataset and split are committed and seeded, so the
 run is reproducible up to hardware nondeterminism on `mps`). `dataset/` (not `data/`, which the starter ignores) is
 committed.
+
+### Running each milestone
+
+`app/core.py` has one function per milestone; each runs with no arguments and prints a real result.
+
+| command | what it does / returns |
+|---|---|
+| `python -m app.cli milestone 1` | builds the dataset; stats with class balance (overall, train, test) |
+| `python -m app.cli milestone 2` | downloads `distilgpt2`, adds the category tokens, resizes embeddings; token ids, vocab size before/after, resize confirmation |
+| `python -m app.cli milestone 3` | fine-tunes with the `Trainer` (~1 min); TrainingArguments used, epochs, final loss, save path |
+| `python -m app.cli milestone 4 ["comment"]` | label, confidence and the full score distribution (needs a trained model) |
+| `python -m app.cli milestone 5 ["comment"]` | label, all scores, display fields and the launch command `streamlit run app/main.py` (needs a trained model) |
 
 ## Tests
 
@@ -201,7 +262,7 @@ app/
   ui_logic.py  milestone 5: pure logic behind the page
   main.py      milestone 5: Streamlit page
   core.py      one function per milestone, orchestrating the modules above
-  cli.py       dataset | train | classify | evaluate
+  cli.py       dataset | train | classify | evaluate | milestone N
   device.py    mps / cpu selection
   llm.py, storage.py   unused starter files (see below)
 dataset/raw/   hand-written comments, one file per category; dataset/*.jsonl|csv are generated

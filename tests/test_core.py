@@ -42,7 +42,10 @@ def test_milestone_1(tmp_path, stub_tokenizer):
 def test_milestone_2(stub_tokenizer, toy_model):
     old = toy_model.get_input_embeddings().num_embeddings
     old_weights = toy_model.get_input_embeddings().weight.detach().clone()
-    ids = core.milestone_2(stub_tokenizer, toy_model)
+    summary = core.milestone_2(stub_tokenizer, toy_model)
+    ids = summary["token_ids"]
+    assert summary["vocab_size_before"] == old and summary["vocab_size_after"] == old + len(LABELS)
+    assert summary["embeddings_resized_to_match"] and list(summary["tokens"]) == LABEL_TOKENS
     emb = toy_model.get_input_embeddings()
     assert emb.num_embeddings == len(stub_tokenizer) == old + len(LABELS)
     for tok, i in zip(LABEL_TOKENS, ids):
@@ -54,7 +57,7 @@ def test_milestone_2(stub_tokenizer, toy_model):
     word_ids = [stub_tokenizer.convert_tokens_to_ids(w) for w in ("staff", "praise")]
     assert torch.allclose(emb.weight[old + LABELS.index("staff_praise")], old_weights[word_ids].mean(dim=0), atol=1e-6)
     toy_model(torch.tensor([ids]))  # would raise IndexError without the resize
-    assert core.milestone_2(stub_tokenizer, toy_model) == ids  # idempotent
+    assert core.milestone_2(stub_tokenizer, toy_model)["token_ids"] == ids  # idempotent
     assert emb.num_embeddings == old + len(LABELS)
 
 
@@ -89,10 +92,10 @@ def test_milestone_4(stub_tokenizer, toy_model):
     clf = Classifier(toy_model, stub_tokenizer, max_length=32)  # toy model has 64 positions
     for text in ["the staff was rude", "price too high", "completely unknown words zzz", "x " * 500]:
         pred = core.milestone_4(text, clf)
-        assert pred.label in LABELS  # never anything but a defined category
-        assert set(pred.scores) == set(LABELS)
-        assert abs(sum(pred.scores.values()) - 1.0) < 1e-5
-        assert pred.label == max(pred.scores, key=pred.scores.get)
+        assert pred["label"] in LABELS  # never anything but a defined category
+        assert set(pred["scores"]) == set(LABELS)
+        assert abs(sum(pred["scores"].values()) - 1.0) < 1e-5
+        assert pred["label"] == max(pred["scores"], key=pred["scores"].get)
         assert core.milestone_4(text, clf) == pred  # deterministic
     import pytest
     with pytest.raises(ValueError):
@@ -116,7 +119,8 @@ def test_milestone_5(stub_tokenizer, toy_model):
     clf = Classifier(toy_model, stub_tokenizer, max_length=32)
     result = core.milestone_5(EXAMPLES[0], clf)
     assert result["label"] in LABELS and result["display"]
-    assert len(result["ranked"]) == len(LABELS)
+    assert len(result["ranked"]) == len(LABELS) and set(result["scores"]) == set(LABELS)
+    assert result["launch_command"] == "streamlit run app/main.py"
     scores = [s for _, s in result["ranked"]]
     assert scores == sorted(scores, reverse=True) and abs(sum(scores) - 1) < 1e-5
 

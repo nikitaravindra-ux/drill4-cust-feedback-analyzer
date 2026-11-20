@@ -78,7 +78,11 @@ def train(base: str = DEFAULT_BASE, output_dir: Path = MODEL_DIR, epochs: float 
     output_dir.mkdir(parents=True, exist_ok=True)
     trainer.save_model(str(output_dir))
     tokenizer.save_pretrained(str(output_dir))
-    info = {"base": base, "device": device, "epochs": epochs, "batch_size": batch_size, "lr": lr,
+    used = args.to_dict()
+    info = {"base": base, "saved_to": str(output_dir),
+            "training_arguments": {k: used[k] for k in (
+                "num_train_epochs", "per_device_train_batch_size", "learning_rate", "weight_decay",
+                "warmup_steps", "lr_scheduler_type", "logging_steps", "seed", "save_strategy", "eval_strategy")}, "device": device, "epochs": epochs, "batch_size": batch_size, "lr": lr,
             "train_examples": len(examples), "final_train_loss": result.training_loss,
             "loss_history": [{"step": h["step"], "loss": h["loss"]} for h in history]}
     (output_dir / "training_info.json").write_text(json.dumps(info, indent=2))

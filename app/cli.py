@@ -1,4 +1,4 @@
-"""Headless interface:  python -m app.cli {dataset,train,classify,evaluate} ..."""
+"""Headless interface:  python -m app.cli {dataset,train,classify,evaluate,milestone} ..."""
 from __future__ import annotations
 
 import argparse
@@ -9,6 +9,28 @@ from pathlib import Path
 from app.dataset import ROOT
 
 RESULTS = ROOT / "results" / "evaluation.json"
+
+
+def run_milestone(args) -> int:
+    from app import core
+    from app.classify import ModelNotFoundError, load_classifier
+    n = args.number
+    try:
+        if n == 1:
+            result = core.milestone_1()
+        elif n == 2:
+            result = core.milestone_2()
+        elif n == 3:
+            result = core.milestone_3(device=args.device)
+        else:
+            kwargs = {"text": args.text} if args.text else {}
+            result = (core.milestone_4 if n == 4 else core.milestone_5)(
+                classifier=load_classifier(device=args.device), **kwargs)
+    except ModelNotFoundError as exc:
+        print(exc, file=sys.stderr)
+        return 1
+    print(json.dumps(result, indent=2, default=str))
+    return 0
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -26,9 +48,15 @@ def main(argv: list[str] | None = None) -> int:
     c.add_argument("--device", default=None)
     e = sub.add_parser("evaluate", help="evaluate on the held-out test split")
     e.add_argument("--device", default=None)
+    m = sub.add_parser("milestone", help="run one milestone (1-5) and print its result")
+    m.add_argument("number", type=int, choices=range(1, 6), metavar="{1..5}")
+    m.add_argument("text", nargs="?", help="comment to classify (milestones 4 and 5; has a default)")
+    m.add_argument("--device", default=None)
     args = parser.parse_args(argv)
 
     from app import core
+    if args.command == "milestone":
+        return run_milestone(args)
     if args.command == "dataset":
         print(json.dumps(core.milestone_1(), indent=2))
     elif args.command == "train":
