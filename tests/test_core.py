@@ -50,8 +50,33 @@ def test_milestone_2(stub_tokenizer, toy_model):
         assert i < emb.num_embeddings
         assert stub_tokenizer.decode([i]) == tok  # round trip
     assert torch.equal(emb.weight[:old], old_weights)  # old rows untouched
-    mean = old_weights.mean(dim=0)
-    assert torch.allclose(emb.weight[old:], mean.expand(len(ids), -1), atol=0.02)  # mean-initialised
+    # default init="words": each new row is the mean embedding of the label's words ("staff praise")
+    word_ids = [stub_tokenizer.convert_tokens_to_ids(w) for w in ("staff", "praise")]
+    assert torch.allclose(emb.weight[old + LABELS.index("staff_praise")], old_weights[word_ids].mean(dim=0), atol=1e-6)
     toy_model(torch.tensor([ids]))  # would raise IndexError without the resize
     assert core.milestone_2(stub_tokenizer, toy_model) == ids  # idempotent
     assert emb.num_embeddings == old + len(LABELS)
+
+
+# Milestone 3: Trainer run reduces loss
+def test_milestone_3(stub_tokenizer, toy_model, tmp_path):
+    from app.finetune import build_trainer, mean_loss, training_arguments
+    add_category_tokens(stub_tokenizer, toy_model)
+    examples = [Example("the staff was rude", "staff_complaint"), Example("great and very helpful staff", "staff_praise"),
+                Example("price too high", "pricing_value"), Example("the store is crowded queue", "store_experience"),
+                Example("it arrived broken", "product_issue")] * 4
+    args = training_arguments(str(tmp_path), device="cpu", max_steps=25, batch_size=4, lr=5e-3)
+    trainer = build_trainer(toy_model, stub_tokenizer, examples, args)
+    before = mean_loss(trainer, stub_tokenizer)
+    trainer.train()
+    after = mean_loss(trainer, stub_tokenizer)
+    assert after < before * 0.8, (before, after)
+
+
+def test_mean_init_sets_new_rows_to_the_average_embedding(stub_tokenizer, toy_model):
+    old = toy_model.get_input_embeddings().num_embeddings
+    mean = toy_model.get_input_embeddings().weight.detach().mean(dim=0)
+    ids = add_category_tokens(stub_tokenizer, toy_model, init="mean")
+    new = toy_model.get_input_embeddings().weight[old:]
+    assert len(ids) == len(LABELS)
+    assert torch.allclose(new, mean.expand(len(ids), -1), atol=0.01)

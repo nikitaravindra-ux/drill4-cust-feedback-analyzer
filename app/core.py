@@ -18,8 +18,10 @@ def milestone_2(tokenizer, model) -> list[int]:
 
 # --- Milestone 3: Fine-tune the model using the Hugging Face Trainer.
 # Hint: Apply the `Trainer` class setup and training loop from the fine-tuning drill.
-def milestone_3():  # TODO(milestone 3)
-    raise NotImplementedError("TODO(milestone 3)")
+def milestone_3(**kwargs) -> dict:
+    """Fine-tune with the Hugging Face Trainer (app/finetune.py) and save to models/. Returns training info."""
+    from app.finetune import train
+    return train(**kwargs)
 
 
 # --- Milestone 4: Implement an inference function to classify new feedback.

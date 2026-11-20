@@ -6,16 +6,17 @@ from app.dataset import LABELS, label_token
 LABEL_TOKENS: list[str] = [label_token(label) for label in LABELS]
 
 
-def add_category_tokens(tokenizer, model, init_noise: float = 1e-3) -> list[int]:
+def add_category_tokens(tokenizer, model, init: str = "words", init_noise: float = 1e-3) -> list[int]:
     """Register the category tokens and make the model able to embed them.
 
     1. tokenizer.add_special_tokens(...)           - new tokens get new ids at the end of the vocab
     2. model.resize_token_embeddings(len(tokenizer)) - WITHOUT this the new ids are out of range of the
        embedding matrix (IndexError, or silent garbage on some devices)
-    3. the new rows start at the MEAN of the existing embeddings (plus tiny noise so the rows are not
-       identical) instead of random noise - they begin as an "average token", which converges faster
-       on a small dataset. GPT-2 ties input and output embeddings, so this also initialises the
-       output logits for the labels.
+    3. the new rows are NOT left random. init="words" (default) sets each row to the mean embedding of the
+       words the label is made of ("<staff_praise>" -> "staff praise"), so every label starts at a
+       meaningful, *different* point; init="mean" sets all rows to the mean of the existing embeddings
+       (plus tiny noise). Both converge faster than random on a small dataset. GPT-2 ties input and
+       output embeddings, so this also initialises the output logits of the labels.
 
     Returns the ids of the category tokens, in LABELS order. Safe to call twice.
     """
@@ -30,7 +31,15 @@ def add_category_tokens(tokenizer, model, init_noise: float = 1e-3) -> list[int]
             new_rows = [i for i in range(old_size, emb.shape[0])]
             if new_rows:
                 mean = emb[:old_size].mean(dim=0)
-                emb[new_rows] = mean + init_noise * torch.randn(len(new_rows), emb.shape[1], device=emb.device)
+                noise = init_noise * torch.randn(len(new_rows), emb.shape[1], device=emb.device)
+                emb[new_rows] = mean + noise
+                if init == "words":
+                    for tok, row in zip(LABEL_TOKENS, new_rows):
+                        word_ids = tokenizer(" " + tok.strip("<>").replace("_", " "),
+                                             add_special_tokens=False)["input_ids"]
+                        word_ids = [w for w in word_ids if w < old_size]
+                        if word_ids:
+                            emb[row] = emb[word_ids].mean(dim=0)
     ids = category_token_ids(tokenizer)
     assert max(ids) < model.get_input_embeddings().num_embeddings, "label id outside embedding matrix"
     return ids
