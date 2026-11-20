@@ -1,0 +1,27 @@
+{
+  "total": 337,
+  "train": 269,
+  "test": 68,
+  "seed": 42,
+  "class_balance": {
+    "product_issue": 72,
+    "staff_praise": 68,
+    "staff_complaint": 65,
+    "pricing_value": 68,
+    "store_experience": 64
+  },
+  "train_balance": {
+    "product_issue": 58,
+    "staff_praise": 54,
+    "staff_complaint": 52,
+    "pricing_value": 54,
+    "store_experience": 51
+  },
+  "test_balance": {
+    "product_issue": 14,
+    "staff_praise": 14,
+    "staff_complaint": 13,
+    "pricing_value": 14,
+    "store_experience": 13
+  }
+}
