@@ -175,7 +175,7 @@ else CPU; override with `--device cpu` or `CFA_DEVICE=cpu`. `python -m app.cli t
 
 ### Why the checkpoint is not committed
 
-The fine-tuned model is ~330 MB (`distilgpt2`; ~500 MB for `gpt2`), too large to commit, so `models/` is in
+The fine-tuned model is ~316 MB (`distilgpt2`; ~500 MB for `gpt2`), too large to commit, so `models/` is in
 `.gitignore`. Regenerate it with `python -m app.cli train` (the dataset and split are committed and seeded, so the
 run is reproducible up to hardware nondeterminism on `mps`). `dataset/` (not `data/`, which the starter ignores) is
 committed.
@@ -217,7 +217,7 @@ is trained and run locally with no external API call. Never commit `.env`; it is
 ## Limitations
 
 - **Small, self-written data.** 337 invented comments; the 68-comment test set means one mistake moves accuracy by
-  1.5 points, so 94% carries wide uncertainty (roughly +/-5 points). One seed, one run, no cross-validation.
+  1.5 points, so 94% carries wide uncertainty (roughly +/-6 points at 95%). One seed, one run, no cross-validation.
 - The comments were written by one person, so they share style; real customer text (other languages, code-mixing,
   very long reviews, sarcasm) will be harder. Not evaluated on any real reviews.
 - **Single label.** Mixed comments are forced into one category; there is no "other/unclear" class, so
