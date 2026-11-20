@@ -2,14 +2,18 @@
 
 # --- Milestone 1: Define 3-5 feedback categories and create a small dataset of example comments with labels.
 # Hint: Start by brainstorming common feedback types and then manually labeling a few examples.
-def milestone_1():  # TODO(milestone 1)
-    raise NotImplementedError("TODO(milestone 1)")
+def milestone_1() -> dict:
+    """Build the labelled dataset (app/dataset.py): feedback.csv + stratified train/test split. Returns stats."""
+    from app.dataset import build_dataset
+    return build_dataset()
 
 
 # --- Milestone 2: Extend GPT-2 tokenizer and model with new category tokens.
 # Hint: Recall how special tokens were added to the tokenizer and model in the legal GPT drill.
-def milestone_2():  # TODO(milestone 2)
-    raise NotImplementedError("TODO(milestone 2)")
+def milestone_2(tokenizer, model) -> list[int]:
+    """Add the category tokens to tokenizer + model, resize the embeddings (app/tokens.py). Returns their ids."""
+    from app.tokens import add_category_tokens
+    return add_category_tokens(tokenizer, model)
 
 
 # --- Milestone 3: Fine-tune the model using the Hugging Face Trainer.
