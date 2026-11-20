@@ -1,0 +1,111 @@
+{
+  "n": 68,
+  "accuracy": 0.9411764705882353,
+  "macro_f1": 0.9417989417989417,
+  "per_class": {
+    "product_issue": {
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1": 1.0,
+      "support": 14
+    },
+    "staff_praise": {
+      "precision": 0.9230769230769231,
+      "recall": 0.8571428571428571,
+      "f1": 0.888888888888889,
+      "support": 14
+    },
+    "staff_complaint": {
+      "precision": 0.8,
+      "recall": 0.9230769230769231,
+      "f1": 0.8571428571428571,
+      "support": 13
+    },
+    "pricing_value": {
+      "precision": 1.0,
+      "recall": 0.9285714285714286,
+      "f1": 0.962962962962963,
+      "support": 14
+    },
+    "store_experience": {
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1": 1.0,
+      "support": 13
+    }
+  },
+  "confusion_matrix": [
+    [
+      14,
+      0,
+      0,
+      0,
+      0
+    ],
+    [
+      0,
+      12,
+      2,
+      0,
+      0
+    ],
+    [
+      0,
+      1,
+      12,
+      0,
+      0
+    ],
+    [
+      0,
+      0,
+      1,
+      13,
+      0
+    ],
+    [
+      0,
+      0,
+      0,
+      0,
+      13
+    ]
+  ],
+  "labels": [
+    "product_issue",
+    "staff_praise",
+    "staff_complaint",
+    "pricing_value",
+    "store_experience"
+  ],
+  "errors": [
+    {
+      "text": "The young man in the shoe section went above and beyond for my mother.",
+      "true": "staff_praise",
+      "predicted": "staff_complaint",
+      "confidence": 0.7109986543655396
+    },
+    {
+      "text": "The pharmacist gave me a lecture instead of an answer. I felt judged.",
+      "true": "staff_complaint",
+      "predicted": "staff_praise",
+      "confidence": 0.5033426880836487
+    },
+    {
+      "text": "I was very confused about which laptop to buy and the assistant patiently explained everything without any pressure.",
+      "true": "staff_praise",
+      "predicted": "staff_complaint",
+      "confidence": 0.9903408885002136
+    },
+    {
+      "text": "I was double charged for one item and had to chase the refund for a week.",
+      "true": "pricing_value",
+      "predicted": "staff_complaint",
+      "confidence": 0.9998639822006226
+    }
+  ],
+  "baseline": {
+    "label": "product_issue",
+    "accuracy": 0.20588235294117646
+  }
+}

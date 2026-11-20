@@ -104,3 +104,39 @@ def test_loading_a_missing_model_gives_a_clear_error(tmp_path):
     from app.classify import ModelNotFoundError, load_classifier
     with pytest.raises(ModelNotFoundError, match="python -m app.cli train"):
         load_classifier(tmp_path / "nope")
+
+
+# Milestone 5: the Streamlit logic layer (the page itself is not launched in tests)
+def test_milestone_5(stub_tokenizer, toy_model):
+    from app.classify import Classifier
+    from app.evaluate import (accuracy, confusion_matrix, format_confusion, macro_f1, majority_baseline,
+                              per_class_metrics)
+    from app.ui_logic import EXAMPLES
+    core.milestone_2(stub_tokenizer, toy_model)
+    clf = Classifier(toy_model, stub_tokenizer, max_length=32)
+    result = core.milestone_5(EXAMPLES[0], clf)
+    assert result["label"] in LABELS and result["display"]
+    assert len(result["ranked"]) == len(LABELS)
+    scores = [s for _, s in result["ranked"]]
+    assert scores == sorted(scores, reverse=True) and abs(sum(scores) - 1) < 1e-5
+
+
+def test_metrics_match_a_hand_checked_confusion_matrix():
+    from app.evaluate import (accuracy, confusion_matrix, format_confusion, macro_f1, majority_baseline,
+                              per_class_metrics)
+    labels = ["A", "B", "C"]
+    y_true = ["A", "A", "A", "B", "B", "C"]
+    y_pred = ["A", "A", "B", "B", "C", "C"]
+    cm = confusion_matrix(y_true, y_pred, labels)
+    assert cm == [[2, 1, 0], [0, 1, 1], [0, 0, 1]]
+    assert abs(accuracy(cm) - 4 / 6) < 1e-9
+    m = per_class_metrics(cm, labels)
+    assert (m["A"]["precision"], m["A"]["recall"]) == (1.0, 2 / 3) and abs(m["A"]["f1"] - 0.8) < 1e-9
+    assert (m["B"]["precision"], m["B"]["recall"], m["B"]["f1"]) == (0.5, 0.5, 0.5)
+    assert (m["C"]["precision"], m["C"]["recall"]) == (0.5, 1.0) and abs(m["C"]["f1"] - 2 / 3) < 1e-9
+    assert abs(macro_f1(m) - (0.8 + 0.5 + 2 / 3) / 3) < 1e-9
+    assert [m[k]["support"] for k in labels] == [3, 2, 1]
+    train = [Example("x", "B")] * 3 + [Example("y", "A")]
+    test = [Example("x", "B"), Example("x", "A"), Example("x", "B"), Example("x", "C")]
+    assert majority_baseline(train, test) == {"label": "B", "accuracy": 0.5}
+    assert "| **A** | 2 | 1 | 0 |" in format_confusion(cm, labels)

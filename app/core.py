@@ -34,5 +34,7 @@ def milestone_4(text: str, classifier=None):
 
 # --- Milestone 5: Build a simple Streamlit app to input comments and show classifications.
 # Hint: Use Streamlit widgets for text input and display, similar to previous app-building exercises.
-def milestone_5():  # TODO(milestone 5)
-    raise NotImplementedError("TODO(milestone 5)")
+def milestone_5(text: str, classifier) -> dict:
+    """The Streamlit logic layer (app/ui_logic.py; the page itself is app/main.py): label + all scores."""
+    from app.ui_logic import analyze_comment
+    return analyze_comment(text, classifier)
