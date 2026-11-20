@@ -26,8 +26,10 @@ def milestone_3(**kwargs) -> dict:
 
 # --- Milestone 4: Implement an inference function to classify new feedback.
 # Hint: Adapt the prediction logic from the drill to generate category tokens.
-def milestone_4():  # TODO(milestone 4)
-    raise NotImplementedError("TODO(milestone 4)")
+def milestone_4(text: str, classifier=None):
+    """Classify one comment (app/classify.py): one forward pass, argmax over the category-token logits."""
+    from app.classify import load_classifier
+    return (classifier or load_classifier()).classify(text)
 
 
 # --- Milestone 5: Build a simple Streamlit app to input comments and show classifications.

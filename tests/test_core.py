@@ -80,3 +80,27 @@ def test_mean_init_sets_new_rows_to_the_average_embedding(stub_tokenizer, toy_mo
     new = toy_model.get_input_embeddings().weight[old:]
     assert len(ids) == len(LABELS)
     assert torch.allclose(new, mean.expand(len(ids), -1), atol=0.01)
+
+
+# Milestone 4: inference scores the category tokens
+def test_milestone_4(stub_tokenizer, toy_model):
+    from app.classify import Classifier
+    core.milestone_2(stub_tokenizer, toy_model)
+    clf = Classifier(toy_model, stub_tokenizer, max_length=32)  # toy model has 64 positions
+    for text in ["the staff was rude", "price too high", "completely unknown words zzz", "x " * 500]:
+        pred = core.milestone_4(text, clf)
+        assert pred.label in LABELS  # never anything but a defined category
+        assert set(pred.scores) == set(LABELS)
+        assert abs(sum(pred.scores.values()) - 1.0) < 1e-5
+        assert pred.label == max(pred.scores, key=pred.scores.get)
+        assert core.milestone_4(text, clf) == pred  # deterministic
+    import pytest
+    with pytest.raises(ValueError):
+        clf.classify("   ")
+
+
+def test_loading_a_missing_model_gives_a_clear_error(tmp_path):
+    import pytest
+    from app.classify import ModelNotFoundError, load_classifier
+    with pytest.raises(ModelNotFoundError, match="python -m app.cli train"):
+        load_classifier(tmp_path / "nope")
